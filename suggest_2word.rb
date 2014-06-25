@@ -1,0 +1,35 @@
+#! /usr/local/bin/ruby
+# -*- coding: utf-8 -*-
+require 'net/http'
+require 'cgi'
+require 'kconv'
+require 'rexml/document'
+
+def suggest firstword, secondword
+  http = Net::HTTP.new('www.google.co.jp', 80)
+  query = "/complete/search?output=toolbar&q=#{CGI::escape(firstword)}%20#{CGI::escape(secondword)}&hl=ja"
+  req = Net::HTTP::Get.new(query)
+  res = http.request(req)
+  # output XML
+  puts parse_suggestion(res.body.toutf8, firstword, secondword)
+end
+
+def parse_suggestion xml, firstword, secondword
+  doc = REXML::Document.new xml
+  suggested_words = []
+  doc.get_elements('//toplevel/CompleteSuggestion').each do |e|
+    result = e.elements['suggestion'].attributes['data'].gsub(firstword, "")
+    result.gsub!(" ", ",")
+    suggested_words << "#{firstword},#{secondword}#{result}" if result.count(",") == 1
+  end
+  suggested_words
+end
+
+word1 = ('あ'..'ん').to_a
+word2 = ('あ'..'ん').to_a
+
+word1.product(word2).collect do |set|
+  sets = "#{set[0]}#{set[1]}"
+  n = rand(10); sleep n;
+  suggest(ARGV[0], sets)
+end
